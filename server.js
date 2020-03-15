@@ -247,6 +247,9 @@ function viewEmployee() {
             choices: ["department", "role", "employee", "back"]
         }
     ]).then(function (answer) {
+        if (answer.whatchange === "back") {
+            start();
+        }
         // when finished prompting, insert a new item into the db with that info
         let goToTable = answer.whatchange;
         console.log(goToTable);
@@ -262,3 +265,82 @@ function showDataTable(goToTable) {
         start();
     });
 }
+
+function updateTable() {
+    // prompt for info about the item being put up for auction
+    connection.query("SELECT * FROM employee", function (err, employeeResults) {
+        if (err) throw err;
+        inquirer.prompt([
+            {
+                name: "employeeName",
+                type: "list",
+                message: "Please select the employee's id to update their role.",
+                choices: function () {
+                    var choiceArray = [];
+                    for (var i = 0; i < employeeResults.length; i++) {
+                        choiceArray.push(employeeResults[i].id);
+                    }
+                    choiceArray.push("back")
+                    return choiceArray;
+                },
+            }
+        ]).then(function (answer) {
+            // when finished prompting, insert a new item into the db with that info
+            if (answer.employeeName === "back") {
+                start();
+            }
+            connection.query("SELECT * FROM role", function (err, newRole) {
+                if (err) throw err;
+                inquirer.prompt([
+                    {
+                        name: "newRole",
+                        type: "list",
+                        message: "Please select the employee's new role.",
+                        choices: function () {
+                            var choiceArray = [];
+                            for (var i = 0; i < newRole.length; i++) {
+                                choiceArray.push(newRole[i].id);
+                            }
+                            choiceArray.push("back");
+                            return choiceArray;
+                        },
+                    }
+                    //,
+                    // {
+                    //     name: "newDepartment",
+                    //     type: "list",
+                    //     message: "Please select the employee's new department.",
+                    //     choices: function () {
+                    //         var choiceArray = [];
+                    //         for (var i = 0; i < newRole.length; i++) {
+                    //             choiceArray.push(newRole[i].title);
+                    //         }
+                    //         choiceArray.push("back");
+                    //         return choiceArray;
+                    //     }}
+                ]).then(function (updateData) {
+                    console.log(updateData);
+                    let chosenRoleID = updateData.newRole;
+                    let employeeID = answer.employeeName;
+                    connection.query("UPDATE employee SET ? WHERE ?",
+                        [
+                            {
+                                role_id: chosenRoleID
+                            },
+                            {
+                                id: employeeID
+                            }
+                        ],
+                        function (err, res) {
+                            if (err) throw err;
+                            console.log(res.affectedRows + " products updated!\n");
+                            showDataTable("employee");
+
+                        }
+                    );
+                });
+            });
+        });
+    });
+}
+
